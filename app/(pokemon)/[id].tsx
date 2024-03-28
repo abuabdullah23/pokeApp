@@ -2,17 +2,24 @@ import { View, Text, StyleSheet, Image } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { Pokemon, getPokemonDetails } from "@/api/pokeapi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
 const Page = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [details, setDetails] = useState<Pokemon>();
   const navigation = useNavigation();
+  const [isFavorite, setIsFavorite] = useState<boolean>(false);
 
   useEffect(() => {
     const load = async () => {
       const data = await getPokemonDetails(id!);
       setDetails(data);
+   
+      const isFavorite = await AsyncStorage.getItem(`favorite-${id}`);
+      setIsFavorite(isFavorite == "true");
     };
+
     load();
   }, [id]);
 
@@ -24,6 +31,28 @@ const Page = () => {
       });
     }
   }, [details]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Text onPress={toggleFavorite}>
+          <Ionicons
+            name={isFavorite ? "heart" : "heart-outline"}
+            size={22}
+            color="#fff"
+          />
+        </Text>
+      ),
+    });
+  }, [isFavorite]);
+
+  const toggleFavorite = async () => {
+    await AsyncStorage.setItem(
+      `favorite-${id}`,
+      !isFavorite ? "true" : "false"
+    );
+    setIsFavorite(!isFavorite);
+  };
 
   return (
     <View style={{ padding: 10 }}>
@@ -48,8 +77,8 @@ const Page = () => {
             >
               Stats:
             </Text>
-            {details.stats.map((item: any) => (
-              <Text>
+            {details.stats.map((item: any, index: number) => (
+              <Text key={index}>
                 {item.stat.name}: {item.base_stat}
               </Text>
             ))}
